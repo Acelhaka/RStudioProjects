@@ -1,0 +1,459 @@
+#######################################################################
+#                         Amarilda Celhaka                            #
+#                         Final Project                               #
+#                         Math 4005                                   #
+#                         Professor: Dr. Cai                          #
+#                         Due Date: 12/11/2018                        #
+#######################################################################
+
+
+
+
+
+
+Red wine data set:
+
+```{r DataFrame setup}
+redWineData <- read.csv(file="C:/Users/Amarilda/Documents/UMSL Classes/MATH 4005/winequality_red.csv", header=TRUE)
+redWineData
+```
+
+
+1. Analyse the dataset using the linear models
+  a). Inspect the values of the varaibles in the data set and determine if any transformations are neccessary for the variables
+
+```{r Problem 1a}
+
+pairs(redWineData)
+
+
+
+#displaying the histogram of all predictors to check for their distribution or if data is skewed.
+library(reshape2)
+library(ggplot2)
+d <- melt(redWineData[,c(1:11)])
+ggplot(d,aes(x = value), bins=30) + 
+  facet_wrap(~variable,scales = "free_x") + 
+  geom_histogram()
+
+logData <- log(redWineData)
+d <- melt(logData[,c(1:11)])
+ggplot(d,aes(x = value), bins=30) + 
+  facet_wrap(~variable,scales = "free_x") + 
+  geom_histogram()
+
+hist(redWineData$sulphates)
+hist(log(redWineData$sulphates))
+hist(redWineData$chlorides)
+hist(log(redWineData$chlorides))
+```
+I used pairs plot to check for data distribution, if there were any outliers or skewed data.However for me it was very difficult to describe the predictors based on the pairs plot. So instead I searched for a better way to check for data distributions and that is why i choose the histogram. Histogram easily descibes how data is distributed. We can see how citric acid is not normaly distributed, residual sugar is skewed to the left(long tail is on the positive side of the peak), positive skew. Also chlorides predictor seem to follow the same distribution as residual sugar. Closest to the normal distribution seem to be density and pH, followed by i..fixed acidity, volatile acidity and sulphates. However for the three last one, the assumption can not be fully right, we must need to perform a transformation of the data to check their distribution instead of using raw data.
+
+Some possible transformation can be using the square root property or the log. We can also try to use the same data but not considering the predictors that are not normaly distributed or that have skewed data or outliers. 
+
+
+
+
+
+
+
+
+
+
+(b). Perform a regression analysis based on the full model(with all the predictors inlcuded). REport all the findings you think are significant   for this analysis. 
+
+ 
+Regression analysis on all predictors, . (all predictors)
+```{r Problem 1b}
+lm1 <- lm(quality ~ ., data = redWineData)
+summary(lm1)
+```
+After a regression analysis on the full model, we concrentrate on the p-value. Based on the p-value we will interpret which of the predictors are important compare to others. A low p-value (< 0.05) indicates that you can reject the null hypothesis. So, a predictor that has a low p-value is likely to be a meaningful addition to our model because changes in the predictor's value are related to changes in the response variable, quality. We notice that alchohol, volatille acidity (p-value < 2e-16), followed by suphates(p-value = 2.13e-15) and chlorides and total sulfur dioxide have a smaller p-value than 0.05, therefore they are statistically significant in the response variable. Instead volatile acidity, citric acid, residual sugar and density seemed to be statistically insignificant since the p-value is greater than 0.05
+
+
+
+
+
+
+
+
+
+
+
+
+(c) Select a best model(with fewer varaibles) according to AIC or adjusted R^2 and report the outputs of the regression analysis based on the selected model. 
+
+#negative AIC what means, distance cannot be zzero
+```{r Problem 1c}
+print("model 2")
+lm2 <- lm((quality) ~ ., data = (sqrt(redWineData)))
+summary(lm2)
+
+
+print("model 3")
+lm3 <- lm(quality ~ alcohol+volatile.acidity, data = redWineData)
+summary(lm3)
+
+print("model 4")
+lm4 <- lm(quality ~ alcohol+volatile.acidity+ log(sulphates+1), data = redWineData)
+summary(lm4)
+
+print("model 5")
+lm5 <- lm(quality ~ sqrt(alcohol) + volatile.acidity+ pH + sqrt(sulphates+1) + (chlorides+1) +free.sulfur.dioxide + total.sulfur.dioxide, data = redWineData)
+summary(lm5)
+
+print("model 6")
+lm6 <- lm(quality ~ ., data =log(redWineData+1))
+summary(lm6)
+
+library(olsrr)
+ms1 <- ols_step_both_p(lm1)
+ms4 <- ols_step_both_p(lm4)
+ms5 <- ols_step_both_p(lm5)
+
+
+#using AIC to compare models
+AIC(lm1, lm2)
+AIC(lm3, lm4)
+AIC(lm5,lm6)
+```
+For right-skewed data-tail is on the right, positive skew-, common transformations include square root, cube root, and log.
+For left-skewed data-tail is on the left, negative skew-, common transformations include square root 
+I performed both transformation, log and square root of the data. For model 5, I have a combination of log and sqrt root on the predictors.
+
+I also used the two most significant predictors, according to the p-value. My choice for the best model will be based on Adusted R^2 and  Model #5 has the biggest R-squared, followed by model #6. Model #6 however has a lower AIC compare to every model.According to our book AIC is more preferable,because it has a better predictive power so the best model should be where I transform the data using log trasformation which is model #6. I do not now why I get such a small negative number, therefore
+ I think the best model is model #5 where R^2 has the biggest value compare to all models and has a smallest AIC than model #1(raw data)
+
+
+
+
+
+
+
+
+
+
+
+
+
+(d)Perform diagnostic checks on model assumptions, calculate Cook's distances and leverages for data points, and variance infation factors.
+
+```{r Problem 1d}
+ols_plot_cooksd_chart(lm5)
+ols_leverage(lm5)
+ols_test_normality(lm5)
+ols_vif_tol(lm5)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(e) Extract the model matrix X for the model you select in (c) and the response variable y and then compute directly in R, using only X and y, the following quantities and compare your calculations to the standard outputs of the R function lm():
+i.??j and the standard errors of ^ ??j, j = 0,1,...,p 
+ii. The fitted values ^ y1,..., ^ yn and the residuals e1,...,en
+
+
+
+```{r Problem 1e}
+X <- model.matrix(lm5)
+y <- redWineData$quality
+myBeta <- solve(t(X)%*%X)%*%t(X)%*%y
+myBeta
+
+#ii
+#fittedY <- (X%*%solve(t(X)%*%X)%*%t(X))%*%y
+fittedY <- X%*%myBeta
+fittedY
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2. Create a new data frame in which the original response variable quality is replaced with a new binary response variable which takes value 1 (the wine quality is high) whenever quality has a value equal to or greater than 7 and value 0 (the wine quality is low) otherwise. Then do the following:
+
+```{r Problem 2 (newDataFrame)}
+redWineData <- read.csv(file="C:/Users/Amarilda/Documents/UMSL Classes/MATH 4005/winequality_red.csv", header=TRUE)
+redWineData$quality[redWineData$quality < 7] <- 0 
+redWineData$quality[redWineData$quality >= 7] <- 1 
+fix(redWineData)
+```
+
+
+
+
+
+
+(a) Select a best logistic regression model to fit the data. Give a discussion on the findings of the computation.
+
+```{r Problem 2a}
+summary(redWineData.glm.full <- glm(quality ~ ., data=redWineData, family = binomial))
+pairs(redWineData)
+
+
+par(mfrow=c(3,4), pty="s") 
+for(nam in c("pH","free.sulfur.dioxide","alcohol","residual.sugar")){ 
+  y <- redWineData[, nam] 
+  plot(density(y), main="", xlab=nam) 
+} 
+for(nam in c("pH","free.sulfur.dioxide","alcohol","residual.sugar")){ 
+  y <- sqrt(redWineData[, nam]) 
+  plot(density(y), main="", xlab=paste('sqrt(',nam,")")) 
+} 
+
+for(nam in c("pH","free.sulfur.dioxide","alcohol","residual.sugar")){ 
+  y <- log(redWineData[, nam]) 
+  plot(density(y), main="", xlab=paste('log(',nam,")")) 
+} 
+
+
+summary(redWineData.glm0 <- glm(formula = quality ~ alcohol + 
+                            volatile.acidity + log(free.sulfur.dioxide) + log(residual.sugar), 
+                          family = binomial, data = redWineData)) 
+
+```
+note: logistic regression is a generalized linear model.
+Different than the linear regression, for the logistic regression we need to focus on minimizing variances. Deviance has a role very similar to a sum of squares on the linear regression.
+From the plot aboves we can see that the only difference of transformation of data is seen at the log of residual.sugar and free.suldur.dioxide. I picked the above variables to perform the transformation, because regarding the pairs grid and histogram, these predictors(not alcohol) did not seem to be normaly distributed. 
+With the new model performed above, we have a considerable difference between the deviance of the full model, compared to our selected model. I picked this model, looking at the data transformation after we used sqrt and log of some predictors that seem to have skewed data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(b) Give an estimated formula for the probability that the wine quality is high, as a function of the values of the predictors and show how you can use this formula to predict wine quality based on new values of the predictors.
+
+```{r}
+redWineData.glm <- glm(formula = quality ~ alcohol + 
+                            volatile.acidity + log(free.sulfur.dioxide) + log(residual.sugar), 
+                          family = binomial, data = redWineData)
+
+summary(redWineData.glm)
+Beta <- coef(redWineData.glm)
+Beta
+
+
+
+probability <- function(x){
+    xTBeta <- t(x)%*%Beta
+    prob <- exp(xTBeta)/(1+exp(xTBeta))
+    return (prob);
+    
+}
+
+#testing the fucntion, eg: picking row #6 of our data
+probability(redWineData[6,])
+```
+
+
+
+
+
+
+
+(c) Use bootstrap method to find 95% confidence intervals for the regression coeficients in your
+model and compare these intervals to the ones from the outputs of the glm() function.
+
+#glm function does not output ci
+```{r}
+  library(boot)
+ newData <- data.frame(redWineData$alcohol,redWineData$quality,redWineData$volatile.acidity)
+
+stat.fun <- function(data, indices){
+  x <- data[indices,1]
+  y <- data[indices,2]
+  z <- data[indices,3]
+  fit <- lm(y ~ x+z)
+  return(coef(fit))
+}
+stat.boot <- boot(data = newData, statistic = stat.fun, R = 2000)
+
+boot.ci(stat.boot,type=c('perc','bca'),t0=stat.boot$t0[1],t=stat.boot$t[,1])
+boot.ci(stat.boot,type=c('perc','bca'),t0=stat.boot$t0[2],t=stat.boot$t[,2])
+```
+
+Like all bootstrap methods, the percentile bootstrap relies on a simple & intuitive idea: instead of making assumptions about the underlying distributions from which our observations could have been sampled, we use the data themselves to estimate sampling distributions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3 Divide the original wine quality data randomly into half and half and use one half as the training data and the other half as the testing data. Then do the following:
+
+#are we using the binary quality?
+```{r Problem 3}
+redWineData <- read.csv(file="C:/Users/Amarilda/Documents/UMSL Classes/MATH 4005/winequality_red.csv", header=TRUE)
+
+idx <- sample(1:nrow(redWineData),nrow(redWineData)/2)
+trainingData <- as.data.frame(redWineData[idx,])
+
+testingData <- as.data.frame(redWineData[-idx,])
+
+```
+ 
+ 
+ 
+ 
+ 
+ 
+Determine the best value for the complexity parameter and then use it to fit a regression tree to the training data. Report your findings from the fitted model. 
+
+```{r Problem 3a}
+
+library(rpart)
+treeTrainingData<- rpart(quality ~ ., data=trainingData, method="anova",cp=0.001)
+plot(treeTrainingData, uniform = TRUE) 
+#text(treeTrainingData)
+plotcp(treeTrainingData)
+
+printcp(treeTrainingData)
+
+
+
+xerror <- treeTrainingData$cptable[,'xerror']
+min.xerror <- which(xerror == min(xerror))
+
+(my_cp <- treeTrainingData$cptable[min.xerror,'CP'])
+bestTree <- rpart(quality ~ ., data=trainingData, method="anova",cp=my_cp)
+plot(bestTree, uniform=T)
+text(bestTree,digits=2,use.n=T)
+
+```
+ The complexity parameter (cp) is used to control the size of the decision tree and to select the optimal tree size. If the cost of adding another variable to the decision tree from the current node is above the value of cp, then tree building does not continue
+Cp will decide the number of splits.
+
+In the above model, cp=0.01386. So we stop once the size of the tree gets 8, because the cost of adding another variable will outcost the value of cp. WE have 5 predictors included in our best tree, selected from 12.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ (b) Use the testing data to estimate the accuracy of prediction of the tree model obtained in (a).
+ 
+
+```{r Problem 3b}
+yhat.r <- predict(bestTree,newdata = testingData)
+mean((yhat.r - testingData$quality)^2)
+```
+Mean gives the proportion of correct predictions.
+Mean most of the time was greater than 45%.
+ 
+ 
+ 
+ 
+ 
+ (c) Estimate the mean sqquared prediction error of the tree model obtained in (a) using a 5-fold
+cross-validation.
+
+```{r Problem 3c}
+
+#tree.rpart <- rpart(quality ~ ., method="class",   
+library(rpart)                   #data = trainingData, cp = 0.0025) 
+plotcp(bestTree) 
+printcp(bestTree) 
+
+
+
+ data_set <- data.frame(x=redWineData$volatile.acidity,z=redWineData$sulphates,
+                        w=redWineData$alcohol,y=redWineData$quality) #building a data frame with x and y columns
+   #cross validatoin for prediction assessment
+  mean_square <- array()
+
+   K <- 5
+   g <- factor(1:nrow(data_set)%%K)
+   for(i in 1:K){
+   subsets <- split(sample(1:nrow(data_set)),g)
+   
+   training_data <- data_set[-subsets[[i]],]      #4/5 of the data_set
+   testing_data <- data_set[subsets[[i]],]        #1/5 of the data_set
+   
+   fit <- lm(y~x+z+w,data=training_data)
+   
+   yhat <- predict(fit,newdata = testing_data)
+   error <- testing_data$y - yhat
+   mean_square[i] <- mean(error^2)
+   }
+   print("Mean Square error from 5K cross validation ")
+   mean(mean_square)
+```
+
+
+
+
+
+
+ (d) Fit a random forest model to the training data and then estimate the accurary of prediction of this model using the testing data.
+#are we using as regression or as classification radnom foresest func()?
+
+```{r Problem 3d}
+library(randomForest)
+set.seed(1)
+wine.rf.c <- randomForest(as.factor(quality) ~ ., data=trainingData, 
+                          importance=T,ntree=50)
+wine.rf.c
+yhat.rf.c <- predict(wine.rf.c,newdata = testingData)
+mean(yhat.rf.c != testingData$quality)
+
+```
+ 
+ 
